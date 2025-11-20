@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="id">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Keuangan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+        }
+
+        html {
+            overflow-y: auto;
+        }
+
+        .liquid-glass-bg {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .liquid-glass-bg::before {
+            content: '';
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            background: radial-gradient(circle at 30% 50%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 20%, rgba(236, 72, 153, 0.2) 0%, transparent 50%);
+            animation: liquid-flow 25s ease-in-out infinite;
+            transition: transform 0.1s ease-out;
+        }
+
+        @keyframes liquid-flow {
+            0%, 100% { transform: translate(-20%, -20%) rotate(0deg); }
+            33% { transform: translate(-30%, -25%) rotate(120deg); }
+            66% { transform: translate(-25%, -30%) rotate(240deg); }
+        }
+
+        .liquid-glass-bg::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+                        rgba(139, 92, 246, 0.15) 0%, 
+                        transparent 40%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .liquid-glass-bg.scrolling::after {
+            opacity: 1;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .glass-button:hover::before {
+            left: 100%;
+        }
+
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-button:active {
+            transform: translateY(0);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(139, 92, 246, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.09);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            padding: 1.75rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #8b5cf6, #3b82f6, #ec4899);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stats-card:hover::before {
+            opacity: 1;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+        }
+
+        .table-row {
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .table-row:hover {
+            background: rgba(255, 255, 255, 0.09);
+            transform: scale(1.01);
+        }
+
+        .delete-btn {
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+            transform: scale(1.2) rotate(10deg);
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1rem 1.5rem;
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            animation: slideIn 0.4s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        body {
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        body::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.6), rgba(59, 130, 246, 0.6));
+            border-radius: 10px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+        }
+
+        body::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.8), rgba(59, 130, 246, 0.8));
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #3b82f6, #ec4899);
+            z-index: 9999;
+            transition: width 0.1s ease;
+        }
+
+        .export-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 0.5rem;
+            min-width: 200px;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .export-menu button {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            color: white;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .export-menu button:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="liquid-glass-bg">
+  <div class="scroll-indicator" id="scroll-indicator"></div><!-- Login Page -->
+  <div id="login-page" class="hidden min-h-full flex items-center justify-center p-4 relative z-10">
+   <div class="glass-card w-full max-w-md p-8 md:p-10">
+    <div class="text-center mb-8">
+     <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-3xl flex items-center justify-center shadow-2xl mx-auto mb-6 overflow-hidden">
+      <svg viewbox="0 0 100 100" class="w-full h-full p-3"><rect x="25" y="40" width="15" height="50" fill="white" opacity="0.9" /> <rect x="45" y="25" width="15" height="65" fill="white" opacity="1" /> <rect x="65" y="35" width="15" height="55" fill="white" opacity="0.85" /> <rect x="28" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="28" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="68" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="74" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <path d="M 15 75 L 30 65 L 45 70 L 60 55 L 75 50 L 85 45" stroke="#fbbf24" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" /> <circle cx="85" cy="45" r="3" fill="#fbbf24" opacity="0.9" /> <polygon points="85,40 90,45 85,50" fill="#fbbf24" opacity="0.9" />
+      </svg>
+     </div>
+     <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Masuk ke Akun</h1>
+     <p class="text-white opacity-70 text-sm">Selamat datang kembali!</p>
+    </div>
+    <form id="login-form" class="space-y-6">
+     <div><label for="login-nama" class="block text-white mb-2 text-sm font-semibold">Nama Lengkap</label> <input type="text" id="login-nama" required placeholder="Masukkan nama Anda" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+     </div>
+     <div><label for="login-password" class="block text-white mb-2 text-sm font-semibold">Password</label>
+      <div class="relative"><input type="password" id="login-password" required placeholder="Masukkan password" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium pr-12"> <button type="button" id="toggle-password-login" class="absolute right-3 top-1/2 -translate-y-1/2 text-white opacity-70 hover:opacity-100 transition-opacity text-xl"> 👁️ </button>
+      </div>
+     </div><button type="submit" class="glass-button text-white px-8 py-4 rounded-xl font-semibold w-full flex items-center justify-center gap-3 text-lg"> <span>🔐</span> <span>Masuk</span> </button>
+    </form>
+    <div class="mt-6 text-center">
+     <p class="text-white opacity-70 text-sm">Belum punya akun?</p><button id="go-to-register" class="glass-button text-white px-6 py-3 rounded-xl font-semibold mt-3 text-sm"> Daftar Akun Baru </button>
+    </div>
+    <div class="mt-8 text-center text-white opacity-60 text-xs">
+     <p>© 2024 Financial Management System</p>
+    </div>
+   </div>
+  </div><!-- Register Page -->
+  <div id="register-page" class="min-h-full flex items-center justify-center p-4 relative z-10">
+   <div class="glass-card w-full max-w-md p-8 md:p-10">
+    <div class="text-center mb-8">
+     <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-3xl flex items-center justify-center shadow-2xl mx-auto mb-6 overflow-hidden">
+      <svg viewbox="0 0 100 100" class="w-full h-full p-3"><rect x="25" y="40" width="15" height="50" fill="white" opacity="0.9" /> <rect x="45" y="25" width="15" height="65" fill="white" opacity="1" /> <rect x="65" y="35" width="15" height="55" fill="white" opacity="0.85" /> <rect x="28" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="28" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="68" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="74" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <path d="M 15 75 L 30 65 L 45 70 L 60 55 L 75 50 L 85 45" stroke="#fbbf24" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" /> <circle cx="85" cy="45" r="3" fill="#fbbf24" opacity="0.9" /> <polygon points="85,40 90,45 85,50" fill="#fbbf24" opacity="0.9" />
+      </svg>
+     </div>
+     <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Daftar Akun Baru</h1>
+     <p class="text-white opacity-70 text-sm">Buat akun untuk memulai</p>
+    </div>
+    <form id="register-form" class="space-y-6">
+     <div><label for="register-nama" class="block text-white mb-2 text-sm font-semibold">Nama Lengkap</label> <input type="text" id="register-nama" required placeholder="Masukkan nama lengkap Anda" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+     </div>
+     <div><label for="register-perusahaan" class="block text-white mb-2 text-sm font-semibold">Username / Bisnis</label> <input type="text" id="register-perusahaan" required placeholder="Masukkan Username" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+     </div>
+     <div><label for="register-password" class="block text-white mb-2 text-sm font-semibold">Password</label>
+      <div class="relative"><input type="password" id="register-password" required placeholder="Buat password (min. 6 karakter)" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium pr-12"> <button type="button" id="toggle-password-register" class="absolute right-3 top-1/2 -translate-y-1/2 text-white opacity-70 hover:opacity-100 transition-opacity text-xl"> 👁️ </button>
+      </div>
+     </div>
+     <div><label for="register-confirm-password" class="block text-white mb-2 text-sm font-semibold">Konfirmasi Password</label>
+      <div class="relative"><input type="password" id="register-confirm-password" required placeholder="Ketik ulang password Anda" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium pr-12"> <button type="button" id="toggle-password-confirm" class="absolute right-3 top-1/2 -translate-y-1/2 text-white opacity-70 hover:opacity-100 transition-opacity text-xl"> 👁️ </button>
+      </div>
+      <p class="text-white opacity-50 text-xs mt-2">Password akan tersimpan dengan aman di browser Anda</p>
+     </div><button type="submit" class="glass-button text-white px-8 py-4 rounded-xl font-semibold w-full flex items-center justify-center gap-3 text-lg"> <span>✨</span> <span>Daftar Sekarang</span> </button>
+    </form>
+    <div class="mt-6 text-center">
+     <p class="text-white opacity-70 text-sm">Sudah punya akun?</p><button id="go-to-login" class="glass-button text-white px-6 py-3 rounded-xl font-semibold mt-3 text-sm"> Masuk ke Akun </button>
+    </div>
+    <div class="mt-8 text-center text-white opacity-60 text-xs">
+     <p>© 2024 Financial Management System</p>
+    </div>
+   </div>
+  </div>
+  <main id="main-app" class="hidden min-h-full p-4 md:p-8 relative z-10">
+   <div class="max-w-7xl mx-auto"><!-- Navigation Header -->
+    <nav class="glass-card p-4 md:p-6 mb-6">
+     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-4">
+       <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+        <svg viewbox="0 0 100 100" class="w-full h-full p-2"><!-- Building silhouette --> <rect x="25" y="40" width="15" height="50" fill="white" opacity="0.9" /> <rect x="45" y="25" width="15" height="65" fill="white" opacity="1" /> <rect x="65" y="35" width="15" height="55" fill="white" opacity="0.85" /> <!-- Windows --> <rect x="28" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="45" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="28" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="52" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="28" y="59" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="34" y="59" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="30" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="38" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="46" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="46" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="48" y="54" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="54" y="54" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="68" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="74" y="40" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="68" y="48" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="74" y="48" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="68" y="56" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <rect x="74" y="56" width="3" height="4" fill="#1e3c72" opacity="0.6" /> <!-- Rising chart arrow overlay --> <path d="M 15 75 L 30 65 L 45 70 L 60 55 L 75 50 L 85 45" stroke="#fbbf24" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" /> <circle cx="85" cy="45" r="3" fill="#fbbf24" opacity="0.9" /> <polygon points="85,40 90,45 85,50" fill="#fbbf24" opacity="0.9" />
+        </svg>
+       </div>
+       <div>
+        <h1 id="nav-company" class="text-xl md:text-2xl font-bold text-white tracking-tight">PT. Perusahaan Global</h1>
+        <p class="text-xs text-white opacity-70">Financial Management System</p>
+       </div>
+      </div>
+      <div class="flex items-center gap-4">
+       <div class="text-white opacity-80 text-xs text-right hidden md:block">
+        <div id="current-date"></div>
+        <div id="current-time" class="font-mono mt-1"></div>
+       </div>
+       <div class="flex items-center gap-3">
+        <div class="text-right hidden sm:block">
+         <p id="nav-name" class="text-white font-semibold text-sm">User</p>
+         <p class="text-white opacity-60 text-xs">Administrator</p>
+        </div><button id="logout-btn" class="glass-button text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 text-sm"> <span>🚪</span> <span class="hidden sm:inline">Logout</span> </button>
+       </div>
+      </div>
+     </div>
+    </nav><!-- Page Header -->
+    <header class="glass-card p-6 md:p-8 mb-6">
+     <div class="text-center">
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-3 tracking-tight">Laporan Keuangan</h2>
+      <p class="text-white opacity-70 text-sm md:text-base">Dashboard Analisis &amp; Monitoring Real-Time</p>
+      <div class="mt-4 flex items-center justify-center gap-2 text-white opacity-80"><span class="text-sm">Dikelola oleh:</span> <span id="display-name" class="font-bold text-lg">User</span> <span class="text-sm">-</span> <span id="display-company" class="font-semibold">Perusahaan</span>
+      </div>
+     </div>
+    </header><!-- Quick Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
+     <div class="stats-card">
+      <div class="flex items-center justify-between mb-3"><span class="text-white text-sm opacity-80 font-medium">Total Pemasukan</span> <span class="text-3xl filter drop-shadow-lg">💰</span>
+      </div>
+      <p id="total-pemasukan" class="text-2xl md:text-4xl font-bold text-green-300">Rp 0</p>
+      <div class="mt-2 text-xs text-white opacity-60" id="pemasukan-count">
+       0 transaksi
+      </div>
+     </div>
+     <div class="stats-card">
+      <div class="flex items-center justify-between mb-3"><span class="text-white text-sm opacity-80 font-medium">Total Pengeluaran</span> <span class="text-3xl filter drop-shadow-lg">💸</span>
+      </div>
+      <p id="total-pengeluaran" class="text-2xl md:text-4xl font-bold text-red-300">Rp 0</p>
+      <div class="mt-2 text-xs text-white opacity-60" id="pengeluaran-count">
+       0 transaksi
+      </div>
+     </div>
+     <div class="stats-card sm:col-span-2 lg:col-span-1">
+      <div class="flex items-center justify-between mb-3"><span class="text-white text-sm opacity-80 font-medium">Saldo Bersih</span> <span class="text-3xl filter drop-shadow-lg">📊</span>
+      </div>
+      <p id="saldo" class="text-2xl md:text-4xl font-bold text-white">Rp 0</p>
+      <div class="mt-2 text-xs text-white opacity-60" id="total-count">
+       0 total transaksi
+      </div>
+     </div>
+    </div><!-- Payment Method Breakdown -->
+    <div class="glass-card p-6 md:p-8 mb-6">
+     <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3"><span>💳</span> Saldo Per Metode Pembayaran</h2>
+     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="stats-card">
+       <div class="flex items-center justify-between mb-3"><span class="text-white text-xs opacity-70 font-medium">Uang Tunai</span> <span class="text-2xl">💵</span>
+       </div>
+       <p id="saldo-tunai" class="text-xl md:text-3xl font-bold text-white">Rp 0</p>
+       <div class="mt-2 text-xs text-white opacity-50" id="tunai-count">
+        0 transaksi
+       </div>
+      </div>
+      <div class="stats-card">
+       <div class="flex items-center justify-between mb-3"><span class="text-white text-xs opacity-70 font-medium">Bank/ATM</span> <span class="text-2xl">🏦</span>
+       </div>
+       <p id="saldo-atm" class="text-xl md:text-3xl font-bold text-white">Rp 0</p>
+       <div class="mt-2 text-xs text-white opacity-50" id="atm-count">
+        0 transaksi
+       </div>
+      </div>
+      <div class="stats-card">
+       <div class="flex items-center justify-between mb-3"><span class="text-white text-xs opacity-70 font-medium">E-Wallet</span> <span class="text-2xl">📱</span>
+       </div>
+       <p id="saldo-ewallet" class="text-xl md:text-3xl font-bold text-white">Rp 0</p>
+       <div class="mt-2 text-xs text-white opacity-50" id="ewallet-count">
+        0 transaksi
+       </div>
+      </div>
+      <div class="stats-card">
+       <div class="flex items-center justify-between mb-3"><span class="text-white text-xs opacity-70 font-medium">Transfer Online</span> <span class="text-2xl">🌐</span>
+       </div>
+       <p id="saldo-transfer" class="text-xl md:text-3xl font-bold text-white">Rp 0</p>
+       <div class="mt-2 text-xs text-white opacity-50" id="transfer-count">
+        0 transaksi
+       </div>
+      </div>
+     </div>
+    </div><!-- Action Buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-6"><button id="add-btn" class="glass-button text-white px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 text-lg"> <span class="text-2xl">➕</span> <span>Tambah Transaksi</span> </button>
+     <div class="relative"><button id="download-btn" class="glass-button text-white px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 text-lg w-full"> <span class="text-2xl">📥</span> <span>Unduh Laporan</span> </button>
+      <div id="export-menu" class="export-menu hidden"><button id="export-excel"> <span class="text-xl">📊</span>
+        <div>
+         <div class="font-semibold">
+          Excel (.xlsx)
+         </div>
+         <div class="text-xs opacity-70">
+          Laporan lengkap dengan format
+         </div>
+        </div></button> <button id="export-csv"> <span class="text-xl">📄</span>
+        <div>
+         <div class="font-semibold">
+          CSV
+         </div>
+         <div class="text-xs opacity-70">
+          Import ke Google Sheets
+         </div>
+        </div></button> <button id="export-summary"> <span class="text-xl">📈</span>
+        <div>
+         <div class="font-semibold">
+          Ringkasan Excel
+         </div>
+         <div class="text-xs opacity-70">
+          Summary + Chart
+         </div>
+        </div></button>
+      </div>
+     </div>
+    </div><!-- Transactions Table -->
+    <div class="glass-card p-6 md:p-8">
+     <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3"><span>📋</span> Daftar Transaksi</h2>
+     <div class="overflow-x-auto">
+      <table class="w-full text-white">
+       <thead>
+        <tr class="border-b-2 border-white border-opacity-20">
+         <th class="text-left py-4 px-3 text-sm md:text-base font-semibold">Tanggal</th>
+         <th class="text-left py-4 px-3 text-sm md:text-base font-semibold">Kategori</th>
+         <th class="text-left py-4 px-3 text-sm md:text-base hidden lg:table-cell font-semibold">Metode</th>
+         <th class="text-left py-4 px-3 text-sm md:text-base hidden md:table-cell font-semibold">Deskripsi</th>
+         <th class="text-right py-4 px-3 text-sm md:text-base font-semibold">Pemasukan</th>
+         <th class="text-right py-4 px-3 text-sm md:text-base font-semibold">Pengeluaran</th>
+         <th class="text-center py-4 px-3 text-sm md:text-base font-semibold">Aksi</th>
+        </tr>
+       </thead>
+       <tbody id="transactions-table">
+        <tr>
+         <td colspan="7" class="text-center py-12 text-white opacity-60">
+          <div class="flex flex-col items-center gap-3"><span class="text-5xl opacity-50">📊</span>
+           <p class="text-lg">Belum ada transaksi</p>
+           <p class="text-sm opacity-70">Klik "Tambah Transaksi" untuk memulai</p>
+          </div></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+    </div><!-- Footer -->
+    <footer class="glass-card p-8 mt-8 mb-4">
+     <div class="text-center text-white opacity-60">
+      <p>© 2025 SMKN 1 MEJAYAN - Sistem Keuangan Terintegrasi</p>
+      <p class="text-xs mt-2">Eric & Dhavin Project</p>
+     </div>
+    </footer>
+   </div>
+  </main><!-- Modal Form -->
+  <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+   <div class="modal-overlay absolute inset-0" id="modal-overlay"></div>
+   <div class="glass-card relative z-10 w-full max-w-2xl p-8 md:p-10">
+    <h3 class="text-3xl font-bold text-white mb-8 flex items-center gap-3"><span>✨</span> Tambah Transaksi Baru</h3>
+    <form id="transaction-form">
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div><label for="tanggal" class="block text-white mb-2 text-sm font-semibold">Tanggal</label> <input type="date" id="tanggal" required class="glass-input w-full px-4 py-3 rounded-xl text-white font-medium">
+      </div>
+      <div><label for="kategori" class="block text-white mb-2 text-sm font-semibold">Kategori</label> <select id="kategori" required class="glass-input w-full px-4 py-3 rounded-xl text-white font-medium"> <option value="" class="bg-gray-900">Pilih Kategori</option> <option value="Penjualan" class="bg-gray-900">Penjualan</option> <option value="Investasi" class="bg-gray-900">Investasi</option> <option value="Operasional" class="bg-gray-900">Operasional</option> <option value="Gaji" class="bg-gray-900">Gaji</option> <option value="Marketing" class="bg-gray-900">Marketing</option> <option value="Pembelian" class="bg-gray-900">Pembelian</option> <option value="Pajak" class="bg-gray-900">Pajak</option> <option value="Utilitas" class="bg-gray-900">Utilitas</option> </select>
+      </div>
+      <div><label for="metode-pembayaran" class="block text-white mb-2 text-sm font-semibold">Metode Pembayaran</label> <select id="metode-pembayaran" required class="glass-input w-full px-4 py-3 rounded-xl text-white font-medium"> <option value="" class="bg-gray-900">Pilih Metode</option> <option value="Tunai" class="bg-gray-900">💵 Uang Tunai</option> <option value="ATM" class="bg-gray-900">🏦 Bank/ATM</option> <option value="E-Wallet" class="bg-gray-900">📱 E-Wallet</option> <option value="Transfer" class="bg-gray-900">🔁 Transfer Online</option> </select>
+      </div>
+     </div>
+     <div class="mb-6"><label for="deskripsi" class="block text-white mb-2 text-sm font-semibold">Deskripsi</label> <input type="text" id="deskripsi" required placeholder="Masukkan deskripsi transaksi" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div><label for="pemasukan" class="block text-white mb-2 text-sm font-semibold">Pemasukan (Rp)</label> <input type="number" id="pemasukan" min="0" step="0.01" placeholder="0" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+      </div>
+      <div><label for="pengeluaran" class="block text-white mb-2 text-sm font-semibold">Pengeluaran (Rp)</label> <input type="number" id="pengeluaran" min="0" step="0.01" placeholder="0" class="glass-input w-full px-4 py-3 rounded-xl text-white placeholder-white placeholder-opacity-50 font-medium">
+      </div>
+     </div>
+     <div class="flex flex-col sm:flex-row gap-4"><button type="submit" class="glass-button text-white px-8 py-4 rounded-xl font-semibold flex-1 flex items-center justify-center gap-3 text-lg"> <span>💾 Simpan Transaksi</span> </button> <button type="button" id="cancel-btn" class="glass-button text-white px-8 py-4 rounded-xl font-semibold flex-1 text-lg opacity-80"> ✕ Batal </button>
+     </div>
+    </form>
+   </div>
+  </div>
+  <script>
+        let allTransactions = [];
+        let currentUser = null;
+
+        // Check login status on page load
+        function checkLoginStatus() {
+            const user = localStorage.getItem('currentUser');
+            if (!user) {
+                showRegisterPage();
+                return false;
+            }
+            currentUser = JSON.parse(user);
+            updateProfileDisplay();
+            loadUserTransactions();
+            showMainApp();
+            return true;
+        }
+
+        function showLoginPage() {
+            document.getElementById('login-page').classList.remove('hidden');
+            document.getElementById('register-page').classList.add('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+        }
+
+        function showRegisterPage() {
+            document.getElementById('register-page').classList.remove('hidden');
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('register-page').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+        }
+
+        function updateProfileDisplay() {
+            if (currentUser) {
+                document.getElementById('display-name').textContent = currentUser.nama;
+                document.getElementById('display-company').textContent = currentUser.perusahaan;
+                document.getElementById('nav-name').textContent = currentUser.nama;
+                document.getElementById('nav-company').textContent = currentUser.perusahaan;
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const nama = document.getElementById('login-nama').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            if (!nama || !password) {
+                showToast('Mohon isi semua field', 'error');
+                return;
+            }
+            
+            // Check if user exists
+            const storedUser = localStorage.getItem('user_' + nama.toLowerCase());
+            
+            if (!storedUser) {
+                showToast('Akun tidak ditemukan! Silakan daftar terlebih dahulu.', 'error');
+                return;
+            }
+
+            const userData = JSON.parse(storedUser);
+            if (userData.password !== password) {
+                showToast('Password salah! Silakan coba lagi.', 'error');
+                return;
+            }
+            
+            currentUser = {
+                nama: userData.nama,
+                perusahaan: userData.perusahaan,
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            updateProfileDisplay();
+            loadUserTransactions();
+            showMainApp();
+            showToast('Selamat datang kembali, ' + nama + '! 👋', 'success');
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            
+            const nama = document.getElementById('register-nama').value.trim();
+            const perusahaan = document.getElementById('register-perusahaan').value.trim();
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            
+            if (!nama || !perusahaan || !password || !confirmPassword) {
+                showToast('Mohon isi semua field', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Password minimal 6 karakter', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showToast('Password tidak cocok! Silakan cek kembali.', 'error');
+                return;
+            }
+            
+            // Check if user already exists
+            const existingUser = localStorage.getItem('user_' + nama.toLowerCase());
+            if (existingUser) {
+                showToast('Nama sudah terdaftar! Silakan gunakan nama lain atau login.', 'error');
+                return;
+            }
+            
+            // Create new user
+            const userData = {
+                nama: nama,
+                perusahaan: perusahaan,
+                password: password,
+                createdAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('user_' + nama.toLowerCase(), JSON.stringify(userData));
+            
+            currentUser = {
+                nama: nama,
+                perusahaan: perusahaan,
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Initialize empty transactions for new user
+            allTransactions = [];
+            saveUserTransactions();
+            
+            updateProfileDisplay();
+            showMainApp();
+            showToast('Akun berhasil dibuat! Selamat datang, ' + nama + '! ✨', 'success');
+        }
+
+        function loadUserTransactions() {
+            if (currentUser) {
+                const stored = localStorage.getItem('transactions_' + currentUser.nama.toLowerCase());
+                if (stored) {
+                    allTransactions = JSON.parse(stored);
+                } else {
+                    allTransactions = [];
+                }
+                renderTransactions();
+                updateStatistics();
+            }
+        }
+
+        function saveUserTransactions() {
+            if (currentUser) {
+                localStorage.setItem('transactions_' + currentUser.nama.toLowerCase(), JSON.stringify(allTransactions));
+            }
+        }
+
+        // Toggle password visibility
+        document.addEventListener('DOMContentLoaded', () => {
+            const togglePasswordLogin = document.getElementById('toggle-password-login');
+            const passwordInputLogin = document.getElementById('login-password');
+            
+            if (togglePasswordLogin && passwordInputLogin) {
+                togglePasswordLogin.addEventListener('click', () => {
+                    const type = passwordInputLogin.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInputLogin.setAttribute('type', type);
+                    togglePasswordLogin.textContent = type === 'password' ? '👁️' : '🙈';
+                });
+            }
+
+            const togglePasswordRegister = document.getElementById('toggle-password-register');
+            const passwordInputRegister = document.getElementById('register-password');
+            
+            if (togglePasswordRegister && passwordInputRegister) {
+                togglePasswordRegister.addEventListener('click', () => {
+                    const type = passwordInputRegister.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInputRegister.setAttribute('type', type);
+                    togglePasswordRegister.textContent = type === 'password' ? '👁️' : '🙈';
+                });
+            }
+
+            const togglePasswordConfirm = document.getElementById('toggle-password-confirm');
+            const passwordInputConfirm = document.getElementById('register-confirm-password');
+            
+            if (togglePasswordConfirm && passwordInputConfirm) {
+                togglePasswordConfirm.addEventListener('click', () => {
+                    const type = passwordInputConfirm.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInputConfirm.setAttribute('type', type);
+                    togglePasswordConfirm.textContent = type === 'password' ? '👁️' : '🙈';
+                });
+            }
+
+            // Navigation between login and register
+            const goToRegister = document.getElementById('go-to-register');
+            if (goToRegister) {
+                goToRegister.addEventListener('click', showRegisterPage);
+            }
+
+            const goToLogin = document.getElementById('go-to-login');
+            if (goToLogin) {
+                goToLogin.addEventListener('click', showLoginPage);
+            }
+        });
+
+        function handleLogout() {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            allTransactions = [];
+            showRegisterPage();
+            showToast('Berhasil logout 👋', 'info');
+        }
+
+        function loadFromLocalStorage() {
+            // Deprecated - now using loadUserTransactions()
+        }
+
+        function saveToLocalStorage() {
+            // Now using saveUserTransactions()
+            saveUserTransactions();
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            
+            document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', dateOptions);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID', timeOptions);
+        }
+
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            const icon = type === 'success' ? '���' : type === 'error' ? '✗' : 'ℹ';
+            const color = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span style="font-size: 1.5rem; color: ${color};">${icon}</span>
+                    <span class="text-white font-medium">${message}</span>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.4s ease reverse';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return date.toLocaleDateString('id-ID', options);
+        }
+
+        function renderTransactions() {
+            const tbody = document.getElementById('transactions-table');
+            
+            if (allTransactions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-white opacity-60">
+                    <div class="flex flex-col items-center gap-3">
+                        <span class="text-5xl opacity-50">📊</span>
+                        <p class="text-lg">Belum ada transaksi</p>
+                        <p class="text-sm opacity-70">Klik "Tambah Transaksi" untuk memulai</p>
+                    </div>
+                </td></tr>`;
+                return;
+            }
+
+            const sortedTransactions = [...allTransactions].sort((a, b) => 
+                new Date(b.tanggal) - new Date(a.tanggal)
+            );
+
+            const methodIcons = {
+                'Tunai': '💵',
+                'ATM': '🏦',
+                'E-Wallet': '📱',
+                'Transfer': '🌐'
+            };
+
+            tbody.innerHTML = sortedTransactions.map((transaction, index) => `
+                <tr class="table-row">
+                    <td class="py-4 px-3 text-sm font-medium">${formatDate(transaction.tanggal)}</td>
+                    <td class="py-4 px-3 text-sm">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">
+                            ${transaction.kategori}
+                        </span>
+                    </td>
+                    <td class="py-4 px-3 text-sm hidden lg:table-cell">
+                        <span class="flex items-center gap-2">
+                            <span>${methodIcons[transaction.metode_pembayaran] || '💳'}</span>
+                            <span class="opacity-80">${transaction.metode_pembayaran || 'Tunai'}</span>
+                        </span>
+                    </td>
+                    <td class="py-4 px-3 text-sm hidden md:table-cell opacity-90">${transaction.deskripsi}</td>
+                    <td class="py-4 px-3 text-sm text-right font-semibold ${transaction.pemasukan > 0 ? 'text-green-300' : 'opacity-40'}">${transaction.pemasukan > 0 ? formatCurrency(transaction.pemasukan) : '-'}</td>
+                    <td class="py-4 px-3 text-sm text-right font-semibold ${transaction.pengeluaran > 0 ? 'text-red-300' : 'opacity-40'}">${transaction.pengeluaran > 0 ? formatCurrency(transaction.pengeluaran) : '-'}</td>
+                    <td class="py-4 px-3 text-center">
+                        <button class="delete-btn text-red-400 hover:text-red-300 text-lg" data-index="${index}" title="Hapus">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', handleDelete);
+            });
+        }
+
+        function updateStatistics() {
+            const totalPemasukan = allTransactions.reduce((sum, t) => sum + (t.pemasukan || 0), 0);
+            const totalPengeluaran = allTransactions.reduce((sum, t) => sum + (t.pengeluaran || 0), 0);
+            const saldo = totalPemasukan - totalPengeluaran;
+
+            const pemasukanCount = allTransactions.filter(t => t.pemasukan > 0).length;
+            const pengeluaranCount = allTransactions.filter(t => t.pengeluaran > 0).length;
+
+            document.getElementById('total-pemasukan').textContent = formatCurrency(totalPemasukan);
+            document.getElementById('total-pengeluaran').textContent = formatCurrency(totalPengeluaran);
+            document.getElementById('pemasukan-count').textContent = `${pemasukanCount} transaksi`;
+            document.getElementById('pengeluaran-count').textContent = `${pengeluaranCount} transaksi`;
+            document.getElementById('total-count').textContent = `${allTransactions.length} total transaksi`;
+            
+            const saldoElement = document.getElementById('saldo');
+            saldoElement.textContent = formatCurrency(saldo);
+            saldoElement.className = `text-2xl md:text-4xl font-bold ${saldo >= 0 ? 'text-green-300' : 'text-red-300'}`;
+
+            updatePaymentMethodStats();
+        }
+
+        function updatePaymentMethodStats() {
+            const methods = {
+                'Tunai': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'ATM': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'E-Wallet': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'Transfer': { pemasukan: 0, pengeluaran: 0, count: 0 }
+            };
+
+            allTransactions.forEach(t => {
+                const method = t.metode_pembayaran || 'Tunai';
+                if (methods[method]) {
+                    methods[method].pemasukan += t.pemasukan || 0;
+                    methods[method].pengeluaran += t.pengeluaran || 0;
+                    methods[method].count++;
+                }
+            });
+
+            document.getElementById('saldo-tunai').textContent = formatCurrency(methods['Tunai'].pemasukan - methods['Tunai'].pengeluaran);
+            document.getElementById('tunai-count').textContent = `${methods['Tunai'].count} transaksi`;
+
+            document.getElementById('saldo-atm').textContent = formatCurrency(methods['ATM'].pemasukan - methods['ATM'].pengeluaran);
+            document.getElementById('atm-count').textContent = `${methods['ATM'].count} transaksi`;
+
+            document.getElementById('saldo-ewallet').textContent = formatCurrency(methods['E-Wallet'].pemasukan - methods['E-Wallet'].pengeluaran);
+            document.getElementById('ewallet-count').textContent = `${methods['E-Wallet'].count} transaksi`;
+
+            document.getElementById('saldo-transfer').textContent = formatCurrency(methods['Transfer'].pemasukan - methods['Transfer'].pengeluaran);
+            document.getElementById('transfer-count').textContent = `${methods['Transfer'].count} transaksi`;
+        }
+
+        function handleDelete(e) {
+            const index = parseInt(e.currentTarget.dataset.index);
+            allTransactions.splice(index, 1);
+            saveToLocalStorage();
+            renderTransactions();
+            updateStatistics();
+            showToast('Transaksi berhasil dihapus', 'success');
+        }
+
+        function showModal() {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('tanggal').value = new Date().toISOString().split('T')[0];
+        }
+
+        function hideModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('transaction-form').reset();
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+
+            const tanggalInput = document.getElementById('tanggal');
+            const kategoriInput = document.getElementById('kategori');
+            const metodeInput = document.getElementById('metode-pembayaran');
+            const deskripsiInput = document.getElementById('deskripsi');
+            const pemasukanInput = document.getElementById('pemasukan');
+            const pengeluaranInput = document.getElementById('pengeluaran');
+
+            const tanggalValue = tanggalInput.value.trim();
+            const kategoriValue = kategoriInput.value.trim();
+            const metodePembayaranValue = metodeInput.value.trim();
+            const deskripsiValue = deskripsiInput.value.trim();
+            const pemasukanValue = parseFloat(pemasukanInput.value) || 0;
+            const pengeluaranValue = parseFloat(pengeluaranInput.value) || 0;
+
+            console.log('Form submitted with values:', {
+                tanggal: tanggalValue,
+                kategori: kategoriValue,
+                metode: metodePembayaranValue,
+                deskripsi: deskripsiValue,
+                pemasukan: pemasukanValue,
+                pengeluaran: pengeluaranValue
+            });
+
+            // Validasi input
+            if (!tanggalValue || !kategoriValue || !metodePembayaranValue || !deskripsiValue) {
+                showToast('Semua field wajib diisi', 'error');
+                return;
+            }
+
+            if (pemasukanValue === 0 && pengeluaranValue === 0) {
+                showToast('Masukkan nilai pemasukan atau pengeluaran', 'error');
+                return;
+            }
+
+            if (pemasukanValue > 0 && pengeluaranValue > 0) {
+                showToast('Isi salah satu: pemasukan ATAU pengeluaran', 'error');
+                return;
+            }
+
+            const formData = {
+                id: Date.now().toString(),
+                tanggal: tanggalValue,
+                kategori: kategoriValue,
+                metode_pembayaran: metodePembayaranValue,
+                deskripsi: deskripsiValue,
+                pemasukan: pemasukanValue,
+                pengeluaran: pengeluaranValue,
+                createdAt: new Date().toISOString()
+            };
+
+            console.log('Adding transaction:', formData);
+
+            allTransactions.push(formData);
+            
+            console.log('All transactions after push:', allTransactions);
+
+            saveToLocalStorage();
+            renderTransactions();
+            updateStatistics();
+            hideModal();
+            showToast('✓ Transaksi berhasil ditambahkan!', 'success');
+        }
+
+        // Export Functions
+        function exportToExcel() {
+            if (allTransactions.length === 0) {
+                showToast('Tidak ada data untuk diunduh', 'info');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet 1: Detail Transaksi
+            const transactionsData = allTransactions.map(t => ({
+                'Tanggal': formatDate(t.tanggal),
+                'Kategori': t.kategori,
+                'Metode Pembayaran': t.metode_pembayaran || 'Tunai',
+                'Deskripsi': t.deskripsi,
+                'Pemasukan (Rp)': t.pemasukan || 0,
+                'Pengeluaran (Rp)': t.pengeluaran || 0
+            }));
+            
+            const ws1 = XLSX.utils.json_to_sheet(transactionsData);
+            
+            // Auto width
+            const colWidths = [
+                { wch: 15 }, // Tanggal
+                { wch: 15 }, // Kategori
+                { wch: 18 }, // Metode
+                { wch: 35 }, // Deskripsi
+                { wch: 18 }, // Pemasukan
+                { wch: 18 }  // Pengeluaran
+            ];
+            ws1['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws1, 'Detail Transaksi');
+            
+            // Sheet 2: Ringkasan
+            const totalPemasukan = allTransactions.reduce((sum, t) => sum + (t.pemasukan || 0), 0);
+            const totalPengeluaran = allTransactions.reduce((sum, t) => sum + (t.pengeluaran || 0), 0);
+            
+            const summaryData = [
+                { 'Keterangan': 'Total Pemasukan', 'Jumlah (Rp)': totalPemasukan },
+                { 'Keterangan': 'Total Pengeluaran', 'Jumlah (Rp)': totalPengeluaran },
+                { 'Keterangan': 'Saldo Bersih', 'Jumlah (Rp)': totalPemasukan - totalPengeluaran },
+                { 'Keterangan': '', 'Jumlah (Rp)': '' },
+                { 'Keterangan': 'Jumlah Transaksi', 'Jumlah (Rp)': allTransactions.length }
+            ];
+            
+            const ws2 = XLSX.utils.json_to_sheet(summaryData);
+            ws2['!cols'] = [{ wch: 25 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+            
+            // Sheet 3: Per Kategori
+            const categoryStats = {};
+            allTransactions.forEach(t => {
+                if (!categoryStats[t.kategori]) {
+                    categoryStats[t.kategori] = { pemasukan: 0, pengeluaran: 0, transaksi: 0 };
+                }
+                categoryStats[t.kategori].pemasukan += t.pemasukan || 0;
+                categoryStats[t.kategori].pengeluaran += t.pengeluaran || 0;
+                categoryStats[t.kategori].transaksi += 1;
+            });
+            
+            const categoryData = Object.entries(categoryStats).map(([kategori, stats]) => ({
+                'Kategori': kategori,
+                'Pemasukan (Rp)': stats.pemasukan,
+                'Pengeluaran (Rp)': stats.pengeluaran,
+                'Saldo (Rp)': stats.pemasukan - stats.pengeluaran,
+                'Jumlah Transaksi': stats.transaksi
+            }));
+            
+            const ws3 = XLSX.utils.json_to_sheet(categoryData);
+            ws3['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+            XLSX.utils.book_append_sheet(wb, ws3, 'Per Kategori');
+            
+            // Sheet 4: Per Metode Pembayaran
+            const methodStats = {
+                'Tunai': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'ATM': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'E-Wallet': { pemasukan: 0, pengeluaran: 0, count: 0 },
+                'Transfer': { pemasukan: 0, pengeluaran: 0, count: 0 }
+            };
+            
+            allTransactions.forEach(t => {
+                const method = t.metode_pembayaran || 'Tunai';
+                if (methodStats[method]) {
+                    methodStats[method].pemasukan += t.pemasukan || 0;
+                    methodStats[method].pengeluaran += t.pengeluaran || 0;
+                    methodStats[method].count++;
+                }
+            });
+            
+            const methodData = Object.entries(methodStats).map(([method, stats]) => ({
+                'Metode Pembayaran': method,
+                'Pemasukan (Rp)': stats.pemasukan,
+                'Pengeluaran (Rp)': stats.pengeluaran,
+                'Saldo (Rp)': stats.pemasukan - stats.pengeluaran,
+                'Jumlah Transaksi': stats.count
+            }));
+            
+            const ws4 = XLSX.utils.json_to_sheet(methodData);
+            ws4['!cols'] = [{ wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+            XLSX.utils.book_append_sheet(wb, ws4, 'Per Metode Pembayaran');
+            
+            const fileName = `Laporan-Keuangan-${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast('Excel berhasil diunduh! (4 sheets)', 'success');
+        }
+
+        function exportToCSV() {
+            if (allTransactions.length === 0) {
+                showToast('Tidak ada data untuk diunduh', 'info');
+                return;
+            }
+
+            let csvContent = '\uFEFF'; // BOM for UTF-8
+            csvContent += 'Tanggal,Kategori,Metode Pembayaran,Deskripsi,Pemasukan,Pengeluaran\n';
+            
+            const sortedTransactions = [...allTransactions].sort((a, b) => 
+                new Date(b.tanggal) - new Date(a.tanggal)
+            );
+
+            sortedTransactions.forEach(transaction => {
+                const row = [
+                    formatDate(transaction.tanggal),
+                    transaction.kategori,
+                    transaction.metode_pembayaran || 'Tunai',
+                    `"${transaction.deskripsi}"`,
+                    transaction.pemasukan || 0,
+                    transaction.pengeluaran || 0
+                ].join(',');
+                csvContent += row + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Laporan-Keuangan-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('CSV berhasil diunduh! Import ke Google Sheets', 'success');
+        }
+
+        function exportSummary() {
+            if (allTransactions.length === 0) {
+                showToast('Tidak ada data untuk diunduh', 'info');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            
+            // Summary Sheet
+            const totalPemasukan = allTransactions.reduce((sum, t) => sum + (t.pemasukan || 0), 0);
+            const totalPengeluaran = allTransactions.reduce((sum, t) => sum + (t.pengeluaran || 0), 0);
+            const saldo = totalPemasukan - totalPengeluaran;
+            
+            const summaryData = [
+                ['LAPORAN KEUANGAN RINGKAS'],
+                ['PT. Perusahaan Global'],
+                ['Periode: ' + new Date().toLocaleDateString('id-ID')],
+                [''],
+                ['RINGKASAN KEUANGAN'],
+                ['Total Pemasukan', totalPemasukan],
+                ['Total Pengeluaran', totalPengeluaran],
+                ['Saldo Bersih', saldo],
+                [''],
+                ['STATISTIK'],
+                ['Jumlah Transaksi', allTransactions.length],
+                ['Transaksi Pemasukan', allTransactions.filter(t => t.pemasukan > 0).length],
+                ['Transaksi Pengeluaran', allTransactions.filter(t => t.pengeluaran > 0).length],
+                [''],
+                ['TOP 5 TRANSAKSI TERBESAR']
+            ];
+            
+            const topTransactions = [...allTransactions]
+                .sort((a, b) => Math.max(b.pemasukan, b.pengeluaran) - Math.max(a.pemasukan, a.pengeluaran))
+                .slice(0, 5);
+            
+            summaryData.push(['Tanggal', 'Kategori', 'Deskripsi', 'Pemasukan', 'Pengeluaran']);
+            topTransactions.forEach(t => {
+                summaryData.push([
+                    formatDate(t.tanggal),
+                    t.kategori,
+                    t.deskripsi,
+                    t.pemasukan || 0,
+                    t.pengeluaran || 0
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(summaryData);
+            ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 35 }, { wch: 18 }, { wch: 18 }];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Ringkasan');
+            
+            const fileName = `Ringkasan-Keuangan-${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            showToast('Ringkasan Excel berhasil diunduh!', 'success');
+        }
+
+        // Event Listeners
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+        document.getElementById('logout-btn').addEventListener('click', handleLogout);
+        document.getElementById('add-btn').addEventListener('click', showModal);
+        document.getElementById('cancel-btn').addEventListener('click', hideModal);
+        document.getElementById('modal-overlay').addEventListener('click', hideModal);
+        document.getElementById('transaction-form').addEventListener('submit', handleSubmit);
+
+        // Export Menu Toggle
+        document.getElementById('download-btn').addEventListener('click', () => {
+            const menu = document.getElementById('export-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        document.getElementById('export-excel').addEventListener('click', () => {
+            document.getElementById('export-menu').classList.add('hidden');
+            exportToExcel();
+        });
+
+        document.getElementById('export-csv').addEventListener('click', () => {
+            document.getElementById('export-menu').classList.add('hidden');
+            exportToCSV();
+        });
+
+        document.getElementById('export-summary').addEventListener('click', () => {
+            document.getElementById('export-menu').classList.add('hidden');
+            exportSummary();
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('export-menu');
+            const btn = document.getElementById('download-btn');
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Scroll Effects
+        let scrollTimeout;
+        const liquidBg = document.querySelector('.liquid-glass-bg');
+        const scrollIndicator = document.getElementById('scroll-indicator');
+        
+        window.addEventListener('scroll', () => {
+            liquidBg.classList.add('scrolling');
+            clearTimeout(scrollTimeout);
+            
+            const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollProgress = (window.scrollY / scrollHeight) * 100;
+            scrollIndicator.style.width = `${scrollProgress}%`;
+            
+            scrollTimeout = setTimeout(() => {
+                liquidBg.classList.remove('scrolling');
+            }, 150);
+        });
+
+        let mouseTimeout;
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            
+            liquidBg.style.setProperty('--mouse-x', `${x}%`);
+            liquidBg.style.setProperty('--mouse-y', `${y}%`);
+            
+            liquidBg.classList.add('scrolling');
+            
+            clearTimeout(mouseTimeout);
+            mouseTimeout = setTimeout(() => {
+                liquidBg.classList.remove('scrolling');
+            }, 500);
+        });
+
+        // Initialize
+        checkLoginStatus();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a0d17ab76e86cfa',t:'MTc2MzUyNzg4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
